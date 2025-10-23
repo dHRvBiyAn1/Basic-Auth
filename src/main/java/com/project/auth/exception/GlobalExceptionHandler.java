@@ -1,0 +1,52 @@
+package com.project.auth.exception;
+
+import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.time.LocalDateTime;
+
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleGenericException(Exception e, HttpServletRequest request) {
+        logger.error("Unhandled exception at {}: {}", request.getRequestURI(), e.getMessage(), e);
+        return buildErrorResponse(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR, request);
+    }
+
+    @ExceptionHandler(UsernameAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleUsernameAlreadyExists(UsernameAlreadyExistsException e, HttpServletRequest request) {
+        logger.warn("Username conflict at {}: {}", request.getRequestURI(), e.getMessage());
+        return buildErrorResponse(e.getMessage(), HttpStatus.CONFLICT, request);
+    }
+
+    @ExceptionHandler(EmailAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleEmailAlreadyExists(EmailAlreadyExistsException e, HttpServletRequest request) {
+        logger.warn("Email conflict at {}: {}", request.getRequestURI(), e.getMessage());
+        return buildErrorResponse(e.getMessage(), HttpStatus.CONFLICT, request);
+    }
+
+    @ExceptionHandler(InvalidUsernamePasswordException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidUsernamePassword(InvalidUsernamePasswordException e, HttpServletRequest request) {
+        logger.warn("Invalid Username or Password at {}: {}", request.getRequestURI(), e.getMessage());
+        return buildErrorResponse(e.getMessage(), HttpStatus.UNAUTHORIZED, request);
+    }
+
+    private ResponseEntity<ErrorResponse> buildErrorResponse(String message, HttpStatus status, HttpServletRequest request) {
+        ErrorResponse errorResponse = new ErrorResponse(
+                message,
+                status.value(),
+                status.getReasonPhrase(),
+                request.getRequestURI(),
+                LocalDateTime.now()
+        );
+        return new ResponseEntity<>(errorResponse, status);
+    }
+}
