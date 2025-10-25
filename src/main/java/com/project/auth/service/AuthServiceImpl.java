@@ -11,35 +11,35 @@ import com.project.auth.exception.UsernameAlreadyExistsException;
 import com.project.auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
+
     private final UserRepository userRepository;
-    private final BCryptPasswordEncoder bCryptPasswordEncoder;
+    private final BCryptPasswordEncoder passwordEncoder;
 
     @Override
     @Transactional
     public RegisterResponse register(RegisterRequest request) {
-        // Check if username already exists
+
         if (userRepository.findByUsername(request.getUsername()).isPresent()) {
             throw new UsernameAlreadyExistsException("Username already exists");
         }
 
-        // Check if email already exists
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new EmailAlreadyExistsException("Email already exists");
         }
 
-        // Create and save user
         User user = new User();
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
-        user.setPassword(bCryptPasswordEncoder.encode(request.getPassword()));
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
 
         userRepository.save(user);
 
@@ -51,18 +51,16 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public LoginResponse login(LoginRequest request) {
-        // Find user by username
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new InvalidUsernamePasswordException("Invalid username or password"));
 
-        // Validate password
-        if (bCryptPasswordEncoder.matches(request.getPassword(), user.getPassword())) {
-            return new LoginResponse(
-                    user.getUsername(),
-                    user.getEmail()
-            );
-        } else {
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new InvalidUsernamePasswordException("Invalid username or password");
         }
+
+        return new LoginResponse(
+                user.getUsername(),
+                user.getEmail()
+        );
     }
 }
