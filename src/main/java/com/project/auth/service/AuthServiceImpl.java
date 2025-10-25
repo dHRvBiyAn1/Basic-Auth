@@ -10,16 +10,18 @@ import com.project.auth.exception.InvalidUsernamePasswordException;
 import com.project.auth.exception.UsernameAlreadyExistsException;
 import com.project.auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-//import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
-//    private final PasswordEncoder passwordEncoder;
+    private final BCryptPasswordEncoder bCryptPasswordEncoder;
 
     @Override
+    @Transactional
     public RegisterResponse register(RegisterRequest request) {
         // Check if username already exists
         if (userRepository.findByUsername(request.getUsername()).isPresent()) {
@@ -37,7 +39,7 @@ public class AuthServiceImpl implements AuthService {
         user.setLastName(request.getLastName());
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
-        user.setPassword(request.getPassword());
+        user.setPassword(bCryptPasswordEncoder.encode(request.getPassword()));
 
         userRepository.save(user);
 
@@ -54,7 +56,7 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new InvalidUsernamePasswordException("Invalid username or password"));
 
         // Validate password
-        if (request.getPassword().equals(user.getPassword())) {
+        if (bCryptPasswordEncoder.matches(request.getPassword(), user.getPassword())) {
             return new LoginResponse(
                     user.getUsername(),
                     user.getEmail()
